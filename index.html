@@ -178,6 +178,25 @@
             const rawText = await response.text();
             
             // Parse words
-            const words = rawText.split(/\r?\n/);
-            let count = 0;
-            words
+           const words = rawText.split(/\r?\n/);
+            words.forEach(w => {
+                const trimmed = w.trim().toUpperCase();
+                if (trimmed.length > 0) dictionary.add(trimmed);
+            });
+
+            // THIS PART IS CRUCIAL TO "UNSTUCK" THE PAGE:
+            isLoaded = true;
+            dot.classList.add('green');
+            text.innerText = "List Loaded (" + dictionary.size + " words)";
+            btn.disabled = false;
+            btn.innerText = "Solve";
+
+        } catch (e) {
+            console.error(e);
+            dot.classList.add('red');
+            text.innerText = "Error loading list";
+            errDiv.style.display = 'block';
+            errDiv.className = 'error-msg';
+            errDiv.innerText = "Could not load " + WORDLIST_FILE + ". Make sure the file exists in the repository.";
+        }
+    });
