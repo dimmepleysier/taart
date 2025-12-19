@@ -197,7 +197,57 @@
     });
 
     // --- 2. Solver Logic ---
-    function solve() {
+   function solve() {
+    const input = document.getElementById('inputStr').value.toUpperCase().trim();
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+
+    if (!input) return;
+
+    // 1. Handle "IJ" as a single unit
+    // Convert input string into an array of characters
+    let inputChars = input.replace(/IJ/g, '1').split(''); 
+
+    let found = [];
+
+    dictionary.forEach(word => {
+        // Prepare dictionary word: 9 chars, treat IJ as 1 char
+        let wordNormal = word.toUpperCase().replace(/IJ/g, '1');
+        
+        if (wordNormal.length !== 9) return;
+
+        // Check every possible starting position (0-8)
+        for (let start = 0; start < 9; start++) {
+            let match = true;
+            for (let i = 0; i < 9; i++) {
+                let wordChar = wordNormal[(start + i) % 9];
+                let inputChar = inputChars[i];
+
+                // If input isn't a wildcard and doesn't match
+                if (inputChar !== '?' && inputChar !== wordChar) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                found.push(word);
+                break; 
+            }
+        }
+    });
+
+    // Display Results
+    if (found.length === 0) {
+        resultsDiv.innerHTML = '<div class="result-card">No matches found.</div>';
+    } else {
+        found.sort().forEach(word => {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = `<span class="word-display">${word}</span>`;
+            resultsDiv.appendChild(card);
+        });
+    }
+}
         const input = document.getElementById('inputStr').value.toUpperCase().trim();
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '';
