@@ -169,10 +169,10 @@
             }
 
             const rawText = await response.text();
-            const words = rawText.split(/\r?\n/);
+            const lines = rawText.split(/\r?\n/);
             
-            words.forEach(w => {
-                const trimmed = w.trim().toUpperCase();
+            lines.forEach(line => {
+                const trimmed = line.trim().toUpperCase();
                 if (trimmed.length > 0) dictionary.add(trimmed);
             });
 
@@ -196,86 +196,18 @@
         }
     });
 
-    // --- 2. Solver Logic ---
-   function solve() {
-    const input = document.getElementById('inputStr').value.toUpperCase().trim();
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '';
-
-    if (!input) return;
-
-    // 1. Handle "IJ" as a single unit
-    // Convert input string into an array of characters
-    let inputChars = input.replace(/IJ/g, '1').split(''); 
-
-    let found = [];
-
-    dictionary.forEach(word => {
-        // Prepare dictionary word: 9 chars, treat IJ as 1 char
-        let wordNormal = word.toUpperCase().replace(/IJ/g, '1');
-        
-        if (wordNormal.length !== 9) return;
-
-        // Check every possible starting position (0-8)
-        for (let start = 0; start < 9; start++) {
-            let match = true;
-            for (let i = 0; i < 9; i++) {
-                let wordChar = wordNormal[(start + i) % 9];
-                let inputChar = inputChars[i];
-
-                // If input isn't a wildcard and doesn't match
-                if (inputChar !== '?' && inputChar !== wordChar) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
-                found.push(word);
-                break; 
-            }
-        }
-    });
-
-    // Display Results
-    if (found.length === 0) {
-        resultsDiv.innerHTML = '<div class="result-card">No matches found.</div>';
-    } else {
-        found.sort().forEach(word => {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            card.innerHTML = `<span class="word-display">${word}</span>`;
-            resultsDiv.appendChild(card);
-        });
-    }
-}
-        const input = document.getElementById('inputStr').value.toUpperCase().trim();
+    // --- 2. Cyclic Solver Logic ---
+    function solve() {
+        const inputRaw = document.getElementById('inputStr').value.toUpperCase().trim();
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '';
 
-        if (!input) return;
+        if (!inputRaw) return;
 
-        // Simple check to find words in dictionary that match input patterns
-        // (Note: Add your specific cyclic logic here if needed)
-        let found = [];
-        dictionary.forEach(word => {
-            // Placeholder logic: check if word contains input (customize as needed)
-            if (word.includes(input.replace(/\?/g, ''))) {
-                found.push(word);
-            }
-        });
+        // Treat 'IJ' as a single character for calculation
+        // We replace it with '1' just to handle indexing correctly
+        const inputProcessed = inputRaw.replace(/IJ/g, '1').split('');
+        const targetLen = 9;
 
-        if (found.length === 0) {
-            resultsDiv.innerHTML = '<div class="result-card">No matches found.</div>';
-        } else {
-            found.forEach(word => {
-                const card = document.createElement('div');
-                card.className = 'result-card';
-                card.innerHTML = `<span class="word-display">${word}</span>`;
-                resultsDiv.appendChild(card);
-            });
-        }
-    }
-</script>
-
-</body>
-</html>
+        if (inputProcessed.length !== targetLen) {
+            resultsDiv.
