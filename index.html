@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyclic Word Solver (File Upload)</title>
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --bg: #f8fafc; --success: #16a34a; --error: #dc2626; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg); color: var(--primary);
+            max-width: 700px; margin: 0 auto; padding: 2rem;
+        }
+        .card {
+            background: white; padding: 2rem; border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;
+        }
+        h1 { margin-top: 0; color: var(--accent); font-size: 1.5rem; }
+        
+        .upload-area {
+            background: #eff6ff; border: 2px dashed #bfdbfe;
+            padding: 1.5rem; text-align: center; border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .status { font-weight: bold; margin-top: 0.5rem; display: block; font-size: 0.9rem;}
+        .status.loaded { color: var(--success); }
+        .status.waiting { color: #64748b; }
+
+        label { display: block; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;}
+        input[type="text"] {
+            width: 100%; padding: 0.8rem; font-size: 1.2rem;
+            border: 2px solid #e2e8f0; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: 2px; box-sizing: border-box;
+            font-family: monospace;
+        }
+        
+        button#solveBtn {
+            background: var(--accent); color: white; border: none;
+            padding: 1rem; border-radius: 6px; font-weight: bold;
+            cursor: pointer; font-size: 1rem; width: 100%; margin-top: 1rem;
+            transition: opacity 0.2s;
+        }
+        button#solveBtn:disabled { background: #94a3b8; cursor: not-allowed; }
+        button#solveBtn:hover:not(:disabled) { opacity: 0.9; }
+
+        .result-item {
+            margin-top: 1rem; padding: 1rem; background: #f1f5f9;
+            border-left: 4px solid var(--accent);
+            font-family: monospace; font-size: 1.2rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .meta { font-size: 0.8rem; color: #64748b; text-align: right; }
+        .highlight { color: #dc2626; font-weight: bold; text-decoration: underline; }
+        .start-marker { background: #facc15; color: black; padding: 0 4px; border-radius: 3px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>Cyclic Word Solver</h1>
+
+        <div class="upload-area">
+            <label for="fileInput" style="margin-top:0; cursor:pointer;">📂 Select words_9char.txt</label>
+            <input type="file" id="fileInput" accept=".txt">
+            <span id="fileStatus" class="status waiting">Waiting for file...</span>
+        </div>
+
+        <label>Enter 8 letters + ? (Cyclic)</label>
+        <input type="text" id="inputString" placeholder="A B C IJ D E F G ?" autocomplete="off">
+        
+        <button id="solveBtn" onclick="solve()" disabled>Load file first</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let dictionary = new Set();
+        const statusEl = document.getElementById('fileStatus');
+        const solveBtn = document.getElementById('solveBtn');
+
+        // 1. Handle File Upload
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const words = text.split(/\r?\n/);
+                dictionary.clear();
+                
+                let count = 0;
+                words.forEach(w => {
+                    const clean = w.trim().toUpperCase();
+                    if(clean) {
+                        dictionary.add(clean);
+                        count++;
+                    }
+                });
+
+                statusEl.textContent = `✓ Loaded ${count} words. Ready to solve.`;
+                statusEl.className = 'status loaded';
+                solveBtn.disabled = false;
+                solveBtn.textContent = "Find Word";
+            };
+            reader.readAsText(file);
+        });
+
+        // 2. Tokenizer (Handles IJ as one unit)
+        function tokenize(str) {
+            // Looks for IJ (together), OR any single letter, OR ?
+            return str.toUpperCase().match(/(IJ|[A-Z]|\?)/g) || [];
+        }
+
+        // 3. Solver Logic
+        function solve() {
+            const rawInput = document.getElementById('inputString').value;
+            const output = document.getElementById('results');
+            output.innerHTML = '';
+
+            const tokens = tokenize(rawInput);
+
+            if (tokens.length !== 9) {
+                output.innerHTML = `<p style="color:var(--error)">Error: Found ${tokens.length} items. Need exactly 9 (IJ counts as 1).</p>`;
+                return;
+            }
+
+            if (!tokens.includes('?')) {
+                output.innerHTML = `<p style="color:var(--error)">Error: You are missing the '?' wildcard.</p>`;
+                return;
+            }
+
+            const directions = [
+                { name: "CW (Left -> Right)", val: 1 },
+                { name: "CCW (Right -> Left)", val: -1 }
+            ];
+
+            // Replacements for '?'
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            alphabet.push("IJ");
+
+            let found = [];
+
+            directions.forEach(dir => {
+                let currentTokens = [...tokens];
+                if (dir.val === -1) currentTokens.reverse();
+
+                // Double the array to handle cycling
+                const cycle = [...currentTokens, ...currentTokens];
+
+                // Slide through all 9 start positions
+                for (let i = 0; i < 9; i++) {
+                    const window = cycle.slice(i, i + 9);
+                    
+                    // We only want windows that contain exactly one '?'
+                    // (This prevents logic errors if the user typed two ?s)
+                    if (window.filter(x => x === '?').length === 1) {
+                        
+                        alphabet.forEach(char => {
+                            // Create the candidate word array
+                            const candidateArr = window.map(t => t === '?' ? char : t);
+                            const candidateString = candidateArr.join('');
+
+                            if (dictionary.has(candidateString)) {
+                                found.push({
+                                    word: candidateString,
+                                    wildcard: char,
+                                    firstChar: candidateArr[0].substring(0,1), // Visual help
+                                    direction: dir.name
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+
+            // Display
+            if (found.length === 0) {
+                output.innerHTML = '<p style="text-align:center; color:#64748b">No words found.</p>';
+                return;
+            }
+
+            // Remove duplicates
+            const unique = [...new Set(found.map(JSON.stringify))].map(JSON.parse);
+
+            unique.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `
+                    <div>
+                        <span class="start-marker">${f.word[0]}</span>${f.word.substring(1)}
+                    </div>
+                    <div class="meta">
+                        Missing: <span class="highlight">${f.wildcard}</span><br>
+                        ${f.direction}
+                    </div>
+                `;
+                output.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
