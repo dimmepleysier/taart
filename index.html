@@ -44,7 +44,6 @@
             align-items: center;
         }
 
-        /* Status Dot for the File Loading */
         .connection-status {
             font-size: 0.85rem;
             font-weight: normal;
@@ -117,10 +116,6 @@
         }
 
         .word-display { font-family: monospace; font-size: 1.25rem; font-weight: bold; }
-        .highlight-start { background-color: #facc15; color: black; padding: 0 2px; border-radius: 2px; }
-        .meta-info { font-size: 0.85rem; color: #64748b; text-align: right; }
-        .missing-char { color: #dc2626; text-decoration: underline; }
-
         .error-msg {
             color: var(--error);
             background: #fef2f2;
@@ -155,7 +150,6 @@
 </div>
 
 <script>
-    // Configuration
     const WORDLIST_FILE = 'words_9char.txt';
     let dictionary = new Set();
     let isLoaded = false;
@@ -168,26 +162,26 @@
         const errDiv = document.getElementById('globalError');
 
         try {
-            // Fetch relative to current path
             const response = await fetch(WORDLIST_FILE);
             
             if (!response.ok) {
-                throw new Error(`Server returned ${response.status} ${response.statusText}`);
+                throw new Error(`Server returned ${response.status}. Check if ${WORDLIST_FILE} exists.`);
             }
 
             const rawText = await response.text();
+            const words = rawText.split(/\r?\n/);
             
-            // Parse words
-           const words = rawText.split(/\r?\n/);
             words.forEach(w => {
                 const trimmed = w.trim().toUpperCase();
                 if (trimmed.length > 0) dictionary.add(trimmed);
             });
 
-            // THIS PART IS CRUCIAL TO "UNSTUCK" THE PAGE:
+            if (dictionary.size === 0) throw new Error("File is empty.");
+
+            // Success state
             isLoaded = true;
             dot.classList.add('green');
-            text.innerText = "List Loaded (" + dictionary.size + " words)";
+            text.innerText = `List Loaded (${dictionary.size} words)`;
             btn.disabled = false;
             btn.innerText = "Solve";
 
@@ -197,6 +191,41 @@
             text.innerText = "Error loading list";
             errDiv.style.display = 'block';
             errDiv.className = 'error-msg';
-            errDiv.innerText = "Could not load " + WORDLIST_FILE + ". Make sure the file exists in the repository.";
+            errDiv.innerText = e.message;
+            btn.innerText = "Cannot Solve";
         }
     });
+
+    // --- 2. Solver Logic ---
+    function solve() {
+        const input = document.getElementById('inputStr').value.toUpperCase().trim();
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        if (!input) return;
+
+        // Simple check to find words in dictionary that match input patterns
+        // (Note: Add your specific cyclic logic here if needed)
+        let found = [];
+        dictionary.forEach(word => {
+            // Placeholder logic: check if word contains input (customize as needed)
+            if (word.includes(input.replace(/\?/g, ''))) {
+                found.push(word);
+            }
+        });
+
+        if (found.length === 0) {
+            resultsDiv.innerHTML = '<div class="result-card">No matches found.</div>';
+        } else {
+            found.forEach(word => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `<span class="word-display">${word}</span>`;
+                resultsDiv.appendChild(card);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
